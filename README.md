@@ -1,66 +1,40 @@
-## Foundry
+# Payment Splitter
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This is how to set up and use [OpenZeppelin's Payment Splitter](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.6/contracts/finance/PaymentSplitter.sol).
 
-Foundry consists of:
+## Deployment
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+Obtain the payee addresses and decide on the ratio for the payment splitter.
+The ratio must be in whole numbers. For example, if you want to split payments at 1.5% and 3.5%, you can use the ratio 3 : 7.
 
-## Documentation
+Deploy the contract.
 
-https://book.getfoundry.sh/
+```sh
+forge create -i --rpc-url https://nodes.sequence.app/sepolia lib/openzeppelin-contracts/contracts/finance/PaymentSplitter.sol:PaymentSplitter \
+--constructor-args "[0xe8db071f698aBA1d60babaE8e08F5cBc28782108,0xE450ae2D6E1E6c09a0c2e355554Df9EE904B90eA]" "[3, 7]"
+```
 
 ## Usage
 
-### Build
+When you need payments split, use the deployed contract address as the payment/fee receiver.
 
-```shell
-$ forge build
+For royalties collected by [Sequence's ERC-721/1155](https://github.com/0xsequence/contracts-library/blob/master/src/tokens/common/ERC2981Controlled.sol), this is done using the `setDefaultRoyalty(address receiver, uint96 feeNumerator)` function.
+
+```sh
+cast send -i <token_addr> "setDefaultRoyalty(address,uint96)" <splitter_addr> <fee_numerator>
 ```
 
-### Test
+For other integrations, like OpenSea, you may have to use the provided interface.
 
-```shell
-$ forge test
+The payment splitter works on a "pull" mechanism. Payments made to the splitter are held by the splitter contract until the receiver is ready to pull the payment.
+
+The receiver can pull the payment using the `release` function. Anyone can call this function to pull payments for the receiver.
+
+```sh
+cast send -i <splitter_addr> "release(address)" <receiver_addr>
 ```
+Payments made in ERC-20 tokens use a similar function.
 
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+```sh
+cast send -i <splitter_addr> "release(address,address)" <token_addr> <receiver_addr>
 ```
